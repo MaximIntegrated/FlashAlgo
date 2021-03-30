@@ -182,3 +182,7 @@ projects:
         - *module_tools
         - records/projects/arm/common/arm_flash_driver.yaml
         - records/projects/arm/targets/musca_b_eflash.yaml
+    maxim:
+        - *module_tools
+        - records/projects/maxim/common/maxim_flash_driver.yaml
+        - records/projects/maxim/targets/max32630.yaml
