@@ -207,10 +207,6 @@ int ProgramPage(uint32_t address, uint32_t size, unsigned char *buffer8)
         return 1;
     }
 
-    /* Write in 32-bit units until we are 128-bit aligned */
-    flc->cn &= ~MXC_F_FLC_CN_BRST;
-    flc->cn |= MXC_F_FLC_CN_WDTH;
-
     while ((remaining >= 4) && ((address & 0x1F) != 0)) {
         flc->addr = address;
         flc->data0 = *buffer++;
@@ -224,11 +220,6 @@ int ProgramPage(uint32_t address, uint32_t size, unsigned char *buffer8)
     }
 
     if ((device_cfg.burst_size == 128) && (remaining >= 16)) {
-
-        /* write in 128-bit bursts while we can */
-        flc->cn &= ~MXC_F_FLC_CN_WDTH;
-        flc->cn |= MXC_F_FLC_CN_BRST;
-
         while (remaining >= 16) {
             flc->addr = address;
             flc->data0 = *buffer++;
@@ -246,10 +237,6 @@ int ProgramPage(uint32_t address, uint32_t size, unsigned char *buffer8)
     }
 
     if (remaining >= 4) {
-        /* write in 32-bit units while we can */
-        flc->cn &= ~MXC_F_FLC_CN_BRST;
-        flc->cn |= MXC_F_FLC_CN_WDTH;
-
         while (remaining >= 4) {
             flc->addr = address;
             flc->data0 = *buffer++;
@@ -266,10 +253,6 @@ int ProgramPage(uint32_t address, uint32_t size, unsigned char *buffer8)
     if (remaining > 0) {
         uint32_t last_word;
         uint32_t mask;
-
-        /* write remaining bytes in a 32-bit unit */
-        flc->cn &= ~MXC_F_FLC_CN_BRST;
-        flc->cn |= MXC_F_FLC_CN_WDTH;
 
         last_word = 0xffffffff;
         mask = 0xff;
