@@ -2,4 +2,4 @@ common:
     target:
         - cortex-m4
     macros:
-        - TARGET_MXM=32630
+        - TARGET_MXM=32670

@@ -18,7 +18,7 @@
 
 #define FLASH_DRV_VERS (0x100+VERS)   // Driver Version, do not modify!
 
-#if (TARGET == MAX32630)
+#if (TARGET_MXM == 32630)
 struct FlashDevice const FlashDevice  =  {
    FLASH_DRV_VERS,             // Driver Version, do not modify!
    "Maxim MAX32xxx Flash",     // Device Name
@@ -35,7 +35,40 @@ struct FlashDevice const FlashDevice  =  {
    0x00002000, 0x00000000,     // Sector Size 8kB
    SECTOR_END
 };
+#elif (TARGET_MXM == 32665)
+struct FlashDevice const FlashDevice = {
+    FLASH_DRV_VERS,             // Driver Version, do not modify!
+    "Maxim MAX32xxx Flash",     // Device Name
+    ONCHIP,                     // Device Type
+    0x10000000,                 // Device Start Address
+    0x00100000,                 // Device Size
+    0x00002000,                 // Programming Page Size
+    0,                          // Reserved, must be 0
+    0xFF,                       // Initial Content of Erased Memory
+    100,                        // Program Page Timeout 100 mSec
+    3000,                       // Erase Sector Timeout 3000 mSec
 
+    // Specify Size and Address of Sectors
+    {{0x00002000, 0x00000000},  // Sector Size {8kB, starting at address 0}
+    {SECTOR_END}}
+};
+#elif (TARGET_MXM == 32670)
+struct FlashDevice const FlashDevice = {
+    FLASH_DRV_VERS,             // Driver Version, do not modify!
+    "Maxim MAX32xxx Flash",     // Device Name
+    ONCHIP,                     // Device Type
+    0x10000000,                 // Device Start Address
+    0x60000,                    // Device Size
+    0x2000,                     // Programming Page Size
+    0,                          // Reserved, must be 0
+    0xFF,                       // Initial Content of Erased Memory
+    100,                        // Program Page Timeout 100 mSec
+    3000,                       // Erase Sector Timeout 3000 mSec
+
+    // Specify Size and Address of Sectors
+    {{0x00002000, 0x00000000},  // Sector Size {8kB, starting at address 0}
+    {SECTOR_END}}
+};
 #else
 #error TARGET NOT DEFINED. Define TARGET as a preprocessor symbol.
 #endif
