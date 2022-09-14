@@ -22,9 +22,17 @@
 #define FLC_CN_UNLOCK_VALUE   0x20000000UL
 
 typedef struct {
-    uint32_t flc_base;
+    uint32_t flc_base;      // flsah controller 0
+    uint32_t flash_base;    // flash block0 addr
+    uint32_t flash_size;    // flash block0 size
+    
     uint32_t clkdiv_value;
     uint32_t burst_size;
+    
+    // flash block1 params, may not be exist
+    uint32_t flc1_base;     // flash controller 1
+    uint32_t flash1_base;   // flash block1 addr
+    uint32_t flash1_size;   // flash block1 size
 } device_cfg_t;
 
 // Allocate space for the device config and fill it with some dummy values so the compiler keeps it.
@@ -32,6 +40,11 @@ volatile const device_cfg_t device_cfg = {
     0x11111111,
     0x22222222,
     0x33333333,
+    0x44444444,
+    0x55555555,
+    0x0,
+    0x0,
+    0x0,
 };
 
 /******************************************************************************/
@@ -62,10 +75,23 @@ int Init(uint32_t adr, uint32_t clk, uint32_t fnc)
     if (IsBusy(flc)) {
         return 1;
     }
-
+		
     /* Set flash clock divider to generate a 1MHz clock from the APB clock */
     flc->clkdiv = device_cfg.clkdiv_value;
 
+    // Enable FLC1 if exist
+    if (device_cfg.flc1_base) {
+        flc = (mxc_flc_regs_t*)device_cfg.flc1_base;
+
+        /* Check if the flash controller is busy */
+        if (IsBusy(flc)) {
+            return 1;
+        }
+
+        /* Set flash clock divider to generate a 1MHz clock from the APB clock */
+        flc->clkdiv = device_cfg.clkdiv_value;	
+    }
+				
     return  0;
 }
 
@@ -82,14 +108,20 @@ int UnInit(uint32_t fnc)
     /* Lock flash */
     flc->cn &= ~MXC_F_FLC_CN_UNLOCK;
 
+    // Uninit FLC1 if exist
+    if (device_cfg.flc1_base) {
+        mxc_flc_regs_t *flc = (mxc_flc_regs_t*)device_cfg.flc1_base;
+
+        /* Lock flash */
+        flc->cn &= ~MXC_F_FLC_CN_UNLOCK;
+    }
+
     return  0;
 }
 
 /******************************************************************************/
-static int PrepareFLC(void)
+static int PrepareFLC(mxc_flc_regs_t *flc)
 {
-    mxc_flc_regs_t *flc = (mxc_flc_regs_t*)device_cfg.flc_base;
-
     /* Check if the flash controller is busy */
     if (IsBusy(flc)) {
         return 1;
@@ -112,17 +144,10 @@ static int PrepareFLC(void)
     return 0;
 }
 
-/******************************************************************************/
-/*
- *  Erase complete Flash Memory
- *    Return Value:   0 - OK,  1 - Failed
- */
-int EraseChip(void)
+static int EraseFlashBlock(mxc_flc_regs_t *flc)
 {
-    mxc_flc_regs_t *flc = (mxc_flc_regs_t*)device_cfg.flc_base;
-
     /* Prepare for the flash operation */
-    if (PrepareFLC() != 0) {
+    if (PrepareFLC(flc) != 0) {
         return 1;
     }
 
@@ -148,16 +173,48 @@ int EraseChip(void)
 
 /******************************************************************************/
 /*
+ *  Erase complete Flash Memory
+ *    Return Value:   0 - OK,  1 - Failed
+ */
+int EraseChip(void)
+{
+    mxc_flc_regs_t *flc = (mxc_flc_regs_t*)device_cfg.flc_base;
+
+    if (EraseFlashBlock(flc) != 0) {
+        return 1;
+    }
+
+    // Erase FLC1 if exist
+    if (device_cfg.flc1_base) {
+        mxc_flc_regs_t *flc = (mxc_flc_regs_t*)device_cfg.flc1_base;
+        
+        if (EraseFlashBlock(flc) != 0) {
+            return 1;
+        }       
+    }
+
+    return  0;
+}
+
+/******************************************************************************/
+/*
  *  Erase Sector in Flash Memory
  *    Parameter:      address:  Sector Address
  *    Return Value:   0 - OK,  1 - Failed
  */
 int EraseSector(uint32_t address)
 {
-    mxc_flc_regs_t *flc = (mxc_flc_regs_t*)device_cfg.flc_base;
+    mxc_flc_regs_t *flc;
 
+    if (address >= device_cfg.flash1_base) {
+        address -= device_cfg.flash_size; // take away first block size
+        flc = (mxc_flc_regs_t*)device_cfg.flc1_base;
+    } else {
+        flc = (mxc_flc_regs_t*)device_cfg.flc_base;
+    }
+    
     /* Prepare for the flash operation */
-    if (PrepareFLC() != 0) {
+    if (PrepareFLC(flc) != 0) {
         return 1;
     }
 
@@ -192,10 +249,17 @@ int EraseSector(uint32_t address)
  */
 int ProgramPage(uint32_t address, uint32_t size, unsigned char *buffer8)
 {
-    mxc_flc_regs_t *flc = (mxc_flc_regs_t *)device_cfg.flc_base;
+    mxc_flc_regs_t *flc;
     uint32_t remaining = size;
     uint32_t *buffer = (uint32_t *)buffer8;
 
+    if (address >= device_cfg.flash1_base) {
+        address -= device_cfg.flash_size; // take away first block size
+        flc = (mxc_flc_regs_t*)device_cfg.flc1_base;
+    } else {
+        flc = (mxc_flc_regs_t*)device_cfg.flc_base;
+    }
+    
     /* Only accept 32-bit aligned pointers */
     if ((uint32_t)buffer8 & 0x3) {
         return 1;
@@ -203,7 +267,7 @@ int ProgramPage(uint32_t address, uint32_t size, unsigned char *buffer8)
     buffer = (uint32_t *)buffer8;
 
     /* Prepare for the flash operation */
-    if (PrepareFLC() != 0) {
+    if (PrepareFLC(flc) != 0) {
         return 1;
     }
 
