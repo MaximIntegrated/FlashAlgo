@@ -69,6 +69,23 @@ struct FlashDevice const FlashDevice = {
     {{0x00002000, 0x00000000},  // Sector Size {8kB, starting at address 0}
     {SECTOR_END}}
 };
+#elif (TARGET_MXM == 32650)
+struct FlashDevice const FlashDevice = {
+    FLASH_DRV_VERS,             // Driver Version, do not modify!
+    "Maxim MAX32xxx Flash",     // Device Name
+    ONCHIP,                     // Device Type
+    0x10000000,                 // Device Start Address
+    0x300000,                    // Device Size
+    0x4000,                     // Programming Page Size
+    0,                          // Reserved, must be 0
+    0xFF,                       // Initial Content of Erased Memory
+    200,                        // Program Page Timeout 200 mSec
+    5000,                       // Erase Sector Timeout 5000 mSec
+
+    // Specify Size and Address of Sectors
+    {{0x00004000, 0x00000000},  // Sector Size {16kB, starting at address 0}
+    {SECTOR_END}}
+};
 #else
 #error TARGET NOT DEFINED. Define TARGET as a preprocessor symbol.
 #endif
