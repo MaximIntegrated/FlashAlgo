@@ -206,7 +206,7 @@ int EraseSector(uint32_t address)
 {
     mxc_flc_regs_t *flc;
 
-    if (address >= device_cfg.flash1_base) {
+    if (device_cfg.flash1_base && (address >= device_cfg.flash1_base)) {
         address -= device_cfg.flash_size; // take away first block size
         flc = (mxc_flc_regs_t*)device_cfg.flc1_base;
     } else {
@@ -253,7 +253,7 @@ int ProgramPage(uint32_t address, uint32_t size, unsigned char *buffer8)
     uint32_t remaining = size;
     uint32_t *buffer = (uint32_t *)buffer8;
 
-    if (address >= device_cfg.flash1_base) {
+    if (device_cfg.flash1_base && (address >= device_cfg.flash1_base)) {
         address -= device_cfg.flash_size; // take away first block size
         flc = (mxc_flc_regs_t*)device_cfg.flc1_base;
     } else {
