@@ -1,0 +1,5 @@
+common:
+    target:
+        - cortex-m4
+    macros:
+        - TARGET_MXM=32690
